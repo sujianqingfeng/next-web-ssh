@@ -4,21 +4,30 @@ import { supabase } from '@/lib/supabase'
 import { connectClient, clientShell } from '@/utils/ssh'
 import type { SSHConfig } from '../_components/Header'
 import { RealtimeChannel } from '@supabase/supabase-js'
+import type { ClientChannel } from 'ssh2'
+
 let count = 0
 
-const channelMap = new Map<string, RealtimeChannel>()
+const channelMap = new Map<
+  string,
+  {
+    channel: RealtimeChannel
+    steam: ClientChannel
+  }
+>()
 
 export async function connect(
   config: SSHConfig,
   channelName: string | null = null
 ) {
-  console.log('---connection---------')
-  console.log('🚀 ~ connect ~ config:', config)
-
   channelName = channelName || `channel-${count++}`
 
   console.log('🚀 ~ connect ~ channelName:', channelName)
-  channelMap.get(channelName)?.unsubscribe()
+  const prev = channelMap.get(channelName)
+  if (prev) {
+    prev.channel.unsubscribe()
+    prev.steam.close()
+  }
 
   const client = await connectClient(config)
   const channel = supabase.channel(channelName)
@@ -35,7 +44,10 @@ export async function connect(
         return
       }
 
-      channelMap.set(channelName!, channel)
+      channelMap.set(channelName!, {
+        channel,
+        steam
+      })
 
       steam.on('data', (data: Buffer) => {
         const text = data.toString()
@@ -51,4 +63,8 @@ export async function connect(
   return {
     channelName
   }
+}
+
+export async function upload(params: any) {
+  console.log('🚀 ~ any:', params)
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
-import { Terminal as XTerminal } from 'xterm'
+import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 import 'xterm/css/xterm.css'
 
@@ -15,18 +15,18 @@ export interface TerminalRef {
   clear: () => void
 }
 
-export default forwardRef<TerminalRef, TerminalProps>(function Terminal(
+export default forwardRef<TerminalRef, TerminalProps>(function _Terminal(
   props,
   ref
 ) {
   const { onKey, onPaste } = props
 
-  const terminalRef = useRef<null | XTerminal>(null)
+  const terminalRef = useRef<null | Terminal>(null)
   const xtermRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     xtermRef.current!.innerHTML = ''
-    const terminal = (terminalRef.current = new XTerminal())
+    const terminal = (terminalRef.current = new Terminal())
     const fitAddon = new FitAddon()
     terminal.loadAddon(fitAddon)
 

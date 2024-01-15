@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/use-toast'
 import { useKeyDown } from '@/hooks/use-key-down'
-import { cn } from '@/lib/utils'
+import { upload } from '../actions'
 
 function parseSSHSchema(schema: string) {
   const splits = schema.split('@')
@@ -64,6 +64,21 @@ export default function Header(props: HeaderProps) {
 
   const { onKeyDown } = useKeyDown('Enter', _onConnect)
 
+  const formRef = useRef<HTMLFormElement>(null)
+  const _onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    console.log('🚀 ~ Header ~ file:', file)
+    if (!file) {
+      return
+    }
+    formRef.current?.submit()
+  }
+
+  const inputRef = useRef<HTMLInputElement>(null)
+  const onUpload = () => {
+    inputRef.current?.click()
+  }
+
   useEffect(() => {
     if (schema) {
       // _onConnect()
@@ -88,20 +103,18 @@ export default function Header(props: HeaderProps) {
           </Button>
         </div>
 
-        <label
-          className={cn(
-            'inline-flex cursor-pointer font-medium bg-primary text-sm rounded-md text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2',
-            !sshConnected && 'pointer-events-none opacity-50'
-          )}
-        >
-          Upload File
+        <form action={upload}>
           <Input
+            ref={inputRef}
             className="hidden"
-            id="picture"
             type="file"
-            onChange={onFileChange}
+            name="file"
+            onChange={_onFileChange}
           />
-        </label>
+          <Button disabled={!sshConnected} onClick={onUpload}>
+            Upload File
+          </Button>
+        </form>
       </div>
     </header>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { connect } from './actions'
+import { connect, upload } from './actions'
 import { supabase } from '@/lib/supabase'
 import Header, { SSHConfig } from './_components/Header'
 import Terminal, { TerminalRef } from './_components/Terminal'
@@ -23,24 +23,25 @@ export default function Home() {
   const onConnect = async (config: SSHConfig) => {
     const { channelName } = await connect(config, channelNameRef.current)
     channelNameRef.current = channelName
-
     console.log('🚀 ~ onConnect ~ channelName:', channelName)
 
+    channelRef.current?.unsubscribe()
+
     const channel = supabase.channel(channelName)
-    channel
-      .on('broadcast', { event: 'shell_output' }, (data) => {
+    channel.subscribe((status) => {
+      console.log(status)
+      if (status !== 'SUBSCRIBED') {
+        return
+      }
+      terminalRef.current?.clear()
+      channelRef.current = channel
+      setSSHConnected(true)
+
+      channel.on('broadcast', { event: 'shell_output' }, (data) => {
         console.log('🚀 ~ .on ~ payload:', data.payload)
         terminalRef.current?.write(data.payload)
       })
-      .subscribe((status) => {
-        console.log(status)
-        if (status !== 'SUBSCRIBED') {
-          return
-        }
-        terminalRef.current?.clear()
-        channelRef.current = channel
-        setSSHConnected(true)
-      })
+    })
   }
 
   const sendShellInput = (text: string) => {
