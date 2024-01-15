@@ -6,6 +6,27 @@ import { useToast } from '@/components/ui/use-toast'
 import { useKeyDown } from '@/hooks/use-key-down'
 import { cn } from '@/lib/utils'
 
+function parseSSHSchema(schema: string) {
+  const splits = schema.split('@')
+  if (splits.length !== 2) {
+    return {
+      username: '',
+      password: '',
+      hostname: '',
+      port: 22
+    }
+  }
+
+  const [username, password] = splits[0].split(':')
+  const [hostname, port] = splits[1].split(':')
+  return {
+    username,
+    password,
+    hostname,
+    port
+  }
+}
+
 const sshSchema = z.object({
   username: z.string().trim().min(1, { message: 'username is required' }),
   password: z.string().trim().min(1, { message: 'password is required' }),
@@ -23,36 +44,36 @@ export default function Header(props: HeaderProps) {
   const { onFileChange, onConnect, sshConnected = false } = props
 
   // const [searchParams] = useSearchParams()
-  const [schema, setSchema] = useState('')
+  const [schema, setSchema] = useState('dev:dev@127.0.0.1:2222')
   const { toast } = useToast()
 
   const _onConnect = () => {
-    const url = new URL(`http://${schema}`)
-    // const parse = sshSchema.safeParse(url)
-    // if (!parse.success) {
-    //   const error = parse.error.errors[0]
-    //   toast({
-    //     variant: 'destructive',
-    //     title: error.message
-    //   })
-    //   return
-    // }
+    const config = parseSSHSchema(schema)
+    const parse = sshSchema.safeParse(config)
+    if (!parse.success) {
+      const error = parse.error.errors[0]
+      toast({
+        variant: 'destructive',
+        title: error.message
+      })
+      return
+    }
 
-    // onConnect(parse.data)
-    onConnect({})
+    onConnect(parse.data)
   }
 
   const { onKeyDown } = useKeyDown('Enter', _onConnect)
 
   useEffect(() => {
     if (schema) {
-      _onConnect()
+      // _onConnect()
     }
   }, [])
 
   return (
     <header className="p-2 flex justify-between items-center border-b">
       <div className="text-[30px] font-bold">Web SSH</div>
+
       <div className="flex justify-center items-center gap-1.5">
         <div className="flex justify-center items-center gap-1.5">
           <Input

@@ -2,12 +2,16 @@
 
 import { connect } from './actions'
 import { supabase } from '@/lib/supabase'
-import { useCookies } from '@/hooks/use-cookies'
-import Header from './_components/Header'
-import Terminal from './_components/Terminal'
+import Header, { SSHConfig } from './_components/Header'
+import Terminal, { TerminalRef } from './_components/Terminal'
+import { useRef, useState } from 'react'
+import { type RealtimeChannel } from '@supabase/supabase-js'
 
 export default function Home() {
-  const { getCookie } = useCookies()
+  const channelRef = useRef<null | RealtimeChannel>(null)
+  const terminalRef = useRef<TerminalRef | null>(null)
+  const [sshConnected, setSSHConnected] = useState(false)
+  const channelNameRef = useRef<string | null>(null)
 
   const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -16,34 +20,63 @@ export default function Home() {
     }
   }
 
-  const onConnect = async () => {
-    console.log('click')
-    await connect()
+  const onConnect = async (config: SSHConfig) => {
+    const { channelName } = await connect(config, channelNameRef.current)
+    channelNameRef.current = channelName
 
-    const channelName = getCookie('channel')
     console.log('🚀 ~ onConnect ~ channelName:', channelName)
 
-    const channel = supabase.channel('test')
-    channel.subscribe((status) => {
-      console.log(status)
-      if (status !== 'SUBSCRIBED') {
-        return
-      }
-
-      channel.send({
-        type: 'broadcast',
-        event: 'hello',
-        payload: { message: 'hello', file: new File(['fff'], 'test.txt') }
+    const channel = supabase.channel(channelName)
+    channel
+      .on('broadcast', { event: 'shell_output' }, (data) => {
+        console.log('🚀 ~ .on ~ payload:', data.payload)
+        terminalRef.current?.write(data.payload)
       })
+      .subscribe((status) => {
+        console.log(status)
+        if (status !== 'SUBSCRIBED') {
+          return
+        }
+        terminalRef.current?.clear()
+        channelRef.current = channel
+        setSSHConnected(true)
+      })
+  }
+
+  const sendShellInput = (text: string) => {
+    if (!channelRef.current) {
+      return
+    }
+
+    channelRef.current.send({
+      type: 'broadcast',
+      event: 'shell_input',
+      payload: text
     })
+  }
+
+  const onKey = (key: string, domEvent: KeyboardEvent) => {
+    switch (domEvent.key) {
+      default:
+        sendShellInput(key)
+        break
+    }
+  }
+
+  const onPaste = (text: string) => {
+    sendShellInput(text)
   }
 
   return (
     <main className="flex min-h-screen flex-col">
-      <Header onFileChange={onFileChange} onConnect={onConnect} />
+      <Header
+        onFileChange={onFileChange}
+        onConnect={onConnect}
+        sshConnected={sshConnected}
+      />
       <div className="flex-auto relative">
         <div className="absolute top-0 left-0 w-full h-full">
-          <Terminal />
+          <Terminal ref={terminalRef} onKey={onKey} onPaste={onPaste} />
         </div>
       </div>
     </main>
