@@ -1,6 +1,6 @@
 'use client'
 
-import { connect, upload } from './actions'
+import { connect, upload } from '../actions'
 import { supabase } from '@/lib/supabase'
 import Header, { SSHConfig } from './_components/Header'
 import Terminal, { TerminalRef } from './_components/Terminal'

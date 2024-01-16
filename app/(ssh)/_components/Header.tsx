@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/use-toast'
 import { useKeyDown } from '@/hooks/use-key-down'
-import { upload } from '../actions'
+import { upload } from '../../actions'
+import { useSearchParams } from 'next/navigation'
 
 function parseSSHSchema(schema: string) {
   const splits = schema.split('@')
@@ -43,8 +44,8 @@ interface HeaderProps {
 export default function Header(props: HeaderProps) {
   const { onFileChange, onConnect, sshConnected = false } = props
 
-  // const [searchParams] = useSearchParams()
-  const [schema, setSchema] = useState('dev:dev@127.0.0.1:2222')
+  const searchParams = useSearchParams()
+  const [schema, setSchema] = useState(searchParams.get('schema') || '')
   const { toast } = useToast()
 
   const _onConnect = () => {
@@ -81,7 +82,7 @@ export default function Header(props: HeaderProps) {
 
   useEffect(() => {
     if (schema) {
-      // _onConnect()
+      _onConnect()
     }
   }, [])
 
@@ -103,7 +104,7 @@ export default function Header(props: HeaderProps) {
           </Button>
         </div>
 
-        <form action={upload}>
+        {/* <form action={upload}>
           <Input
             ref={inputRef}
             className="hidden"
@@ -114,7 +115,7 @@ export default function Header(props: HeaderProps) {
           <Button disabled={!sshConnected} onClick={onUpload}>
             Upload File
           </Button>
-        </form>
+        </form> */}
       </div>
     </header>
   )

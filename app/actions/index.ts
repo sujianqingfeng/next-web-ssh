@@ -2,7 +2,7 @@
 
 import { supabase } from '@/lib/supabase'
 import { connectClient, clientShell } from '@/utils/ssh'
-import type { SSHConfig } from '../_components/Header'
+import type { SSHConfig } from '../(ssh)/_components/Header'
 import { RealtimeChannel } from '@supabase/supabase-js'
 import type { ClientChannel } from 'ssh2'
 
@@ -31,34 +31,35 @@ export async function connect(
 
   const client = await connectClient(config)
   const channel = supabase.channel(channelName)
-  const steam = await clientShell(client)
 
-  channel
-    .on('broadcast', { event: 'shell_input' }, async (data) => {
+  channel.subscribe(async (status) => {
+    console.log('🚀 ~ channel.subscribe ~ status:', status)
+    if (status !== 'SUBSCRIBED') {
+      return
+    }
+
+    const steam = await clientShell(client)
+
+    channelMap.set(channelName!, {
+      channel,
+      steam
+    })
+
+    steam.on('data', (data: Buffer) => {
+      const text = data.toString()
+      console.log('🚀 ~ steam.on ~ data:', text)
+      channel.send({
+        type: 'broadcast',
+        event: 'shell_output',
+        payload: text
+      })
+    })
+
+    channel.on('broadcast', { event: 'shell_input' }, async (data) => {
       console.log('🚀 shell_input', data.payload)
       steam.write(data.payload)
     })
-    .subscribe(async (status) => {
-      console.log('🚀 ~ channel.subscribe ~ status:', status)
-      if (status !== 'SUBSCRIBED') {
-        return
-      }
-
-      channelMap.set(channelName!, {
-        channel,
-        steam
-      })
-
-      steam.on('data', (data: Buffer) => {
-        const text = data.toString()
-        console.log('🚀 ~ steam.on ~ data:', text)
-        channel.send({
-          type: 'broadcast',
-          event: 'shell_output',
-          payload: text
-        })
-      })
-    })
+  })
 
   return {
     channelName
